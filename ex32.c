@@ -23,6 +23,10 @@ typedef struct {
 
 // board - global variable
 int board[BOARD_SIZE][BOARD_SIZE] = {FREE};
+// player - global variable
+int curPlayer;
+// sMBuf - shared memory pointer, global variable
+char *sMBuf;
 
 /*******************************************************************************
 * function name : exitWithError
@@ -44,6 +48,7 @@ void initBoard() {
 
 void printBoard() {
     int i,j;
+    printf("The board is:\n");
     for (i = 0; i < BOARD_SIZE; ++i) {
         for (j = 0; j < BOARD_SIZE; ++j) {
             printf("%d ", board[i][j]);
@@ -358,7 +363,7 @@ EndMode checkEndGame(int player) {
     }
 }
 
-MoveMode checkMove(int x, int y, int player, Boolean writeToBoard) {
+MoveMode checkMove(int x, int y, int player ,Boolean writeToBoard) {
     int i, j;
     int savePos[8] = {-2};
 
@@ -395,12 +400,49 @@ MoveMode checkMove(int x, int y, int player, Boolean writeToBoard) {
     return INVALID_SQUARE;
 }
 
-Point getUserInput() {
-    Point p;
-    printf("Please choose a square\n");
-    scanf("[%d,%d]", &p.x, &p.y);
+int charToPlayer(char c) {
+    if (c == 'w') return WHITE;
+    return BLACK;
+}
 
-    return p;
+char playerToChar(int player) {
+    if (player == WHITE) return 'w';
+    return 'b';
+}
+
+void sendMoveToSharedMemory(int player, int x, int y) {
+    sprintf(sMBuf, "%c%d%d\0", playerToChar(player), x, y);
+}
+
+void getMoveFromSharedMemory() {
+
+}
+
+Point doOneMove() {
+    int x, y;
+    MoveMode m;
+
+    printf("Please choose a square\n");
+    do {
+        scanf("[%d,%d]", x, y);
+
+        m = checkMove(x, y, curPlayer, TRUE);
+        if (m == NO_SUCH_SQUARE) {
+            printf("No such square\n");
+        } else if (m == INVALID_SQUARE) {
+            printf("This square is invalid\n");
+        } else {
+            // valid move
+            break;
+        }
+
+        printf("Please choose another square\n");
+    } while (m != VALID_MOVE);
+
+    // valid move
+    printBoard();
+    printf("Waiting for the other player to make a move\n");
+    sendMoveToSharedMemory(curPlayer, x, y);
 }
 
 void start(int signum) {
@@ -410,11 +452,10 @@ void start(int signum) {
 int main(int argc, char **argv) {
     int x,y;
     int fifoFD;
-    char buffer[20] = {0}, *sMBuf;
+    char buffer[20] = {0};
     struct sigaction sigUserHandler;
     key_t key;
     int shmid;
-    int player;
     struct shmid_ds ds;
 
     sigset_t blocked;
@@ -424,6 +465,10 @@ int main(int argc, char **argv) {
     sigUserHandler.sa_handler = start;
     sigUserHandler.sa_mask = blocked;
     sigUserHandler.sa_flags = 0;
+
+    if ((sigaction(SIGUSR1, &sigUserHandler, NULL)) < 0) {
+        exitWithError("sigaction error");
+    }
 
     // create key
     key = ftok("ex31.c", 'k');
@@ -465,21 +510,33 @@ int main(int argc, char **argv) {
 
     // determine player
     if (ds.shm_nattch == 2) {
-        player = BLACK;
+        curPlayer = BLACK;
     } else if (ds.shm_nattch == 3) {
-        player = WHITE;
+        curPlayer = WHITE;
     }
 
-    // first play
-    if (player == BLACK) {
-        
-    }
-
+    // initialize game
     initBoard();
     printBoard();
 
-    scanf("[%d,%d]", &x, &y);
-    checkMove(x, y, WHITE, TRUE);
+    // first play
+    if (curPlayer == BLACK) {
+        doOneMove();
+    }
+
+    // game loop
+    while (TRUE) {
+        // current player move
+        if (charToPlayer(sMBuf) != curPlayer) {
+
+            if (WHITE_WIN) break;
+
+        } else {
+            // wait for the other player to play
+            printf("Waiting for the other player to make a move\n");
+            sleep(1);
+        }
+    }
 
     printBoard();
     return 0;

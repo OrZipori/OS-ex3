@@ -34,10 +34,6 @@ void exitWithError(char *msg) {
     exit(-1);
 }
 
-void siguser1Handler(int signum) {
-    // do nothing - because we woke up for sending sigusr1 for the second player
-}
-
 int main(int argc, char **argv) {
     pid_t firstPID, secondPID;
     int fifoFD;
@@ -45,19 +41,6 @@ int main(int argc, char **argv) {
     key_t key;
     int shmid;
     char *sharedMemory, *shmBuf;
-    struct sigaction sigUserHandler;
-
-    sigset_t blocked;
-
-    sigemptyset(&blocked);
-    // set handler for SIGALRM
-    sigUserHandler.sa_handler = siguser1Handler;
-    sigUserHandler.sa_mask = blocked;
-    sigUserHandler.sa_flags = 0;
-
-    if ((sigaction(SIGUSR1, &sigUserHandler, NULL)) < 0) {
-        exitWithError("sigaction error");
-    }
 
     // create channel for communication
     if ((mkfifo("fifo_clientTOserver", 0777)) < 0) {
@@ -70,18 +53,14 @@ int main(int argc, char **argv) {
     }
 
     // get first pid
-    if ((read(fifoFD, buffer, sizeof(buffer))) < 0) {
+    if ((read(fifoFD, &firstPID, sizeof(pid_t))) < 0) {
         exitWithError("read error");
     }
-
-    firstPID = atoi(buffer);
 
     // get second pid
-    if ((read(fifoFD, buffer, sizeof(buffer))) < 0) {
+    if ((read(fifoFD, &secondPID, sizeof(pid_t))) < 0) {
         exitWithError("read error");
     }
-
-    secondPID = atoi(buffer);
 
     // remove the fifo
     if ((unlink("fifo_clientTOserver")) < 0) {
@@ -113,7 +92,7 @@ int main(int argc, char **argv) {
     }
 
     // wait until the first player makes his move
-    pause();
+    sleep(1000);
 
     // signal first player
     if ((kill(secondPID, SIGUSR1)) < 0) {
