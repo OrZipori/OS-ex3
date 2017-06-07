@@ -1,11 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/fcntl.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
 #define BOARD_SIZE 8
 #define BLACK 2
 #define WHITE 1
 #define FREE 0
+#define MEM_SIZE 1024
 
 typedef enum {INVALID_SQUARE = 0,NO_SUCH_SQUARE, VALID_MOVE} MoveMode;
 typedef enum {BLACK_WIN = 1, WHITE_WIN, DRAW, NO_END} EndMode;
@@ -389,13 +395,90 @@ MoveMode checkMove(int x, int y, int player, Boolean writeToBoard) {
     return INVALID_SQUARE;
 }
 
+Point getUserInput() {
+    Point p;
+    printf("Please choose a square\n");
+    scanf("[%d,%d]", &p.x, &p.y);
+
+    return p;
+}
+
+void start(int signum) {
+    // do nothing - just wakup from pause
+}
+
 int main(int argc, char **argv) {
     int x,y;
+    int fifoFD;
+    char buffer[20] = {0}, *sMBuf;
+    struct sigaction sigUserHandler;
+    key_t key;
+    int shmid;
+    int player;
+    struct shmid_ds ds;
+
+    sigset_t blocked;
+
+    sigemptyset(&blocked);
+    // set handler for SIGALRM
+    sigUserHandler.sa_handler = start;
+    sigUserHandler.sa_mask = blocked;
+    sigUserHandler.sa_flags = 0;
+
+    // create key
+    key = ftok("ex31.c", 'k');
+    if (((key_t) - 1) == key) {
+        exitWithError("ftok error");
+    }
+
+    // open the fifo for communication
+    if ((fifoFD = open("fifo_clientTOserver", O_WRONLY)) < 0) {
+        exitWithError("fifo error");
+    }
+
+    // assign pid
+    sprintf(buffer,"%d", getpid());
+
+    // send pid to server
+    if ((write(fifoFD, buffer, sizeof(buffer))) < 0) {
+        exitWithError("write error");
+    }
+
+    // wait for SIGUSR1
+    pause();
+
+    // get the shmid by key
+    if ((shmid = shmget(key, MEM_SIZE, 0644 | IPC_CREAT)) < 0) {
+        exitWithError("shmget error");
+    }
+
+    // attach to the shared memory
+    sMBuf = (char *) shmat( shmid, NULL, 0);
+    if (((char *) - 1) == sMBuf) {
+        exitWithError("shmat error");
+    }
+
+    // check to determine which player I am
+    if (shmctl(shmid, IPC_STAT, &ds) == -1) {
+        exitWithError("shmctl error");
+    }
+
+    // determine player
+    if (ds.shm_nattch == 2) {
+        player = BLACK;
+    } else if (ds.shm_nattch == 3) {
+        player = WHITE;
+    }
+
+    // first play
+    if (player == BLACK) {
+        
+    }
 
     initBoard();
     printBoard();
 
-    scanf("%d,%d", &x, &y);
+    scanf("[%d,%d]", &x, &y);
     checkMove(x, y, WHITE, TRUE);
 
     printBoard();

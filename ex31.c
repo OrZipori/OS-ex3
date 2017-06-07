@@ -7,7 +7,8 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/fcntl.h>
-
+#include <string.h>
+#include <signal.h>
 
 #define BOARD_SIZE 8
 #define BLACK 2
@@ -33,11 +34,30 @@ void exitWithError(char *msg) {
     exit(-1);
 }
 
+void siguser1Handler(int signum) {
+    // do nothing - because we woke up for sending sigusr1 for the second player
+}
+
 int main(int argc, char **argv) {
     pid_t firstPID, secondPID;
     int fifoFD;
     char buffer[20];
     key_t key;
+    int shmid;
+    char *sharedMemory, *shmBuf;
+    struct sigaction sigUserHandler;
+
+    sigset_t blocked;
+
+    sigemptyset(&blocked);
+    // set handler for SIGALRM
+    sigUserHandler.sa_handler = siguser1Handler;
+    sigUserHandler.sa_mask = blocked;
+    sigUserHandler.sa_flags = 0;
+
+    if ((sigaction(SIGUSR1, &sigUserHandler, NULL)) < 0) {
+        exitWithError("sigaction error");
+    }
 
     // create channel for communication
     if ((mkfifo("fifo_clientTOserver", 0777)) < 0) {
@@ -73,9 +93,57 @@ int main(int argc, char **argv) {
         exitWithError("ftok error");
     }
 
+    // create shared memory
+    if ((shmid = shmget(key, 4096, IPC_CREAT | 0644)) < 0) {
+        exitWithError("shemget error");
+    }
 
+    // attach to the shared memory
+    sharedMemory = (char *) shmat( shmid, NULL, 0);
+    if (((char *) - 1) == sharedMemory) {
+        exitWithError("shmat error");
+    }
 
+    // initialize shared memory
+    memset(sharedMemory, 0, 4096);
 
+    // signal first player
+    if ((kill(firstPID, SIGUSR1)) < 0) {
+        exitWithError("kill error");
+    }
+
+    // wait until the first player makes his move
+    pause();
+
+    // signal first player
+    if ((kill(secondPID, SIGUSR1)) < 0) {
+        exitWithError("kill error");
+    }
+
+    // busy waiting for end of game
+    while (sharedMemory[0] != 'e') {
+        sleep(1);
+    }
+
+    // end game
+    printf("GAME OVER !\n");
+    if (sharedMemory[1] == 'w') {
+        printf("Winning player: White\n");
+    } else if (sharedMemory[1] == 'b') {
+        printf("Winning player: Black\n");
+    } else {
+        printf("No winning player");
+    }
+
+    // detach from the shared memory
+    if ((shmdt(sharedMemory)) <0 ) {
+        exitWithError("shmdt error");
+    }
+
+    // remove shared memory
+    if ((shmctl(shmid, IPC_RMID, NULL)) < 0) {
+        exitWithError("shmctl error");
+    }
 
     return 0;
 }
