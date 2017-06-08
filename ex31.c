@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
     char *sharedMemory, *shmBuf;
 
     // create channel for communication
-    if ((mkfifo("fifo_clientTOserver", 0777)) < 0) {
+    if ((mkfifo("fifo_clientTOserver", O_CREAT|0777)) < 0) {
         exitWithError("fifo error");
     }
 
@@ -56,11 +56,12 @@ int main(int argc, char **argv) {
     if ((read(fifoFD, &firstPID, sizeof(pid_t))) < 0) {
         exitWithError("read error");
     }
-
+    printf("first : %d\n", firstPID);
     // get second pid
     if ((read(fifoFD, &secondPID, sizeof(pid_t))) < 0) {
         exitWithError("read error");
     }
+    printf("second :%d\n", secondPID);
 
     // remove the fifo
     if ((unlink("fifo_clientTOserver")) < 0) {
@@ -92,7 +93,7 @@ int main(int argc, char **argv) {
     }
 
     // wait until the first player makes his move
-    sleep(1000);
+    sleep(1500);
 
     // signal first player
     if ((kill(secondPID, SIGUSR1)) < 0) {

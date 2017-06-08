@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <string.h>
 
 #define BOARD_SIZE 8
 #define BLACK 2
@@ -317,6 +318,43 @@ MoveMode checkDownRight(int x, int y, int player, Boolean writeToBoard) {
     return  INVALID_SQUARE;
 }
 
+MoveMode checkMove(int x, int y, int player ,Boolean writeToBoard) {
+    int i, j;
+    int savePos[8] = {-2};
+
+    // trivial checks
+    if (x >= BOARD_SIZE || x < 0) {
+        return NO_SUCH_SQUARE;
+    }
+
+    if (y >= BOARD_SIZE || y < 0) {
+        return NO_SUCH_SQUARE;
+    }
+
+    if (board[y][x] != FREE) {
+        return INVALID_SQUARE;
+    }
+
+    // start checking non trivial checks
+
+    savePos[0] = checkAbove(x, y, player, writeToBoard); // check above
+    savePos[1] = checkBelow(x, y, player, writeToBoard); // check below
+    savePos[2] = checkRight(x, y, player, writeToBoard); // check right
+    savePos[3] = checkLeft(x, y, player, writeToBoard); // check left
+    savePos[4] = checkUpperRight(x, y, player, writeToBoard); // check upper right
+    savePos[5] = checkUpperLeft(x, y, player, writeToBoard); // check upper left
+    savePos[6] = checkDownRight(x, y, player, writeToBoard); // check down right
+    savePos[7] = checkDownLeft(x, y, player, writeToBoard); // check down left
+
+    for (i = 0; i < BOARD_SIZE; i++) {
+        if (savePos[i] != INVALID_SQUARE) {
+            return VALID_MOVE;
+        }
+    }
+
+    return INVALID_SQUARE;
+}
+
 EndMode checkEndGame(int player) {
     // we check if the other player can't make a move
     int oppColor = (player == BLACK) ? WHITE:BLACK;
@@ -358,50 +396,14 @@ EndMode checkEndGame(int player) {
         if (white < black) {
             return BLACK_WIN;
         }
-
-        return DRAW;
-    }
-}
-
-MoveMode checkMove(int x, int y, int player ,Boolean writeToBoard) {
-    int i, j;
-    int savePos[8] = {-2};
-
-    // trivial checks
-    if (x >= BOARD_SIZE || x < 0) {
-        return NO_SUCH_SQUARE;
     }
 
-    if (y >= BOARD_SIZE || y < 0) {
-        return NO_SUCH_SQUARE;
-    }
-
-    if (board[y][x] != FREE) {
-        return INVALID_SQUARE;
-    }
-
-    // start checking non trivial checks
-
-    savePos[0] = checkAbove(x, y, player, writeToBoard); // check above
-    savePos[1] = checkBelow(x, y, player, writeToBoard); // check below
-    savePos[2] = checkRight(x, y, player, writeToBoard); // check right
-    savePos[3] = checkLeft(x, y, player, writeToBoard); // check left
-    savePos[4] = checkUpperRight(x, y, player, writeToBoard); // check upper right
-    savePos[5] = checkUpperLeft(x, y, player, writeToBoard); // check upper left
-    savePos[6] = checkDownRight(x, y, player, writeToBoard); // check down right
-    savePos[7] = checkDownLeft(x, y, player, writeToBoard); // check down left
-
-    for (i = 0; i < BOARD_SIZE; i++) {
-        if (savePos[i] != INVALID_SQUARE) {
-            return VALID_MOVE;
-        }
-    }
-
-    return INVALID_SQUARE;
+    return DRAW;
 }
 
 int charToPlayer(char c) {
     if (c == 'w') return WHITE;
+    if (c == 0) return curPlayer; // if it's 0 means the first player didn't made a move
     return BLACK;
 }
 
@@ -411,20 +413,20 @@ char playerToChar(int player) {
 }
 
 void sendMoveToSharedMemory(int player, int x, int y) {
-    sprintf(sMBuf, "%c%d%d\0", playerToChar(player), x, y);
+    sprintf(sMBuf, "%c%d%d", playerToChar(player), x, y);
 }
 
 void getMoveFromSharedMemory() {
 
 }
 
-Point doOneMove() {
+void doOneMove() {
     int x, y;
     MoveMode m;
 
     printf("Please choose a square\n");
     do {
-        scanf("[%d,%d]", x, y);
+        scanf("[%d,%d]", &x, &y);
 
         m = checkMove(x, y, curPlayer, TRUE);
         if (m == NO_SUCH_SQUARE) {
@@ -447,6 +449,7 @@ Point doOneMove() {
 
 void start(int signum) {
     // do nothing - just wakup from pause
+    printf("%d", getpid());
 }
 
 int main(int argc, char **argv) {
@@ -456,6 +459,7 @@ int main(int argc, char **argv) {
     struct sigaction sigUserHandler;
     key_t key;
     int shmid;
+    pid_t pid;
     struct shmid_ds ds;
 
     sigset_t blocked;
@@ -482,11 +486,16 @@ int main(int argc, char **argv) {
     }
 
     // assign pid
-    sprintf(buffer,"%d", getpid());
+    pid = getpid();
 
     // send pid to server
-    if ((write(fifoFD, buffer, sizeof(buffer))) < 0) {
+    if ((write(fifoFD, &pid, sizeof(pid_t))) < 0) {
         exitWithError("write error");
+    }
+
+    // close the fifo
+    if ((close(fifoFD)) < 0) {
+        exitWithError("close error");
     }
 
     // wait for SIGUSR1
@@ -527,8 +536,8 @@ int main(int argc, char **argv) {
     // game loop
     while (TRUE) {
         // current player move
-        if (charToPlayer(sMBuf) != curPlayer) {
-
+        if (charToPlayer(sMBuf[0]) != curPlayer) {
+            doOneMove();
             if (WHITE_WIN) break;
 
         } else {
