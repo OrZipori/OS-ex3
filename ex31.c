@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
     }
 
     // open for read only
-    if ((fifoFD = open("fifo_clientTOserver", O_RDONLY)) < 0) {
+    if ((fifoFD = open("fifo_clientTOserver", O_RDWR)) < 0) {
         exitWithError("open error");
     }
 
@@ -92,14 +92,17 @@ int main(int argc, char **argv) {
         exitWithError("kill error");
     }
 
+    printf("first \n");
+
     // wait until the first player makes his move
-    sleep(1500);
+    sleep(1);
 
     // signal first player
     if ((kill(secondPID, SIGUSR1)) < 0) {
         exitWithError("kill error");
     }
 
+    printf("second\n");
     // busy waiting for end of game
     while (sharedMemory[0] != 'e') {
         sleep(1);

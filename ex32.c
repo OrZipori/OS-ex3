@@ -28,6 +28,8 @@ int board[BOARD_SIZE][BOARD_SIZE] = {FREE};
 int curPlayer;
 // sMBuf - shared memory pointer, global variable
 char *sMBuf;
+// end game state - global variable
+EndMode gameState;
 
 /*******************************************************************************
 * function name : exitWithError
@@ -45,6 +47,9 @@ void initBoard() {
     board[4][4] = BLACK;
     board[4][3] = WHITE;
     board[3][4] = WHITE;
+
+    // set game state
+    gameState = NO_END;
 }
 
 void printBoard() {
@@ -56,6 +61,7 @@ void printBoard() {
         }
         printf("\n");
     }
+    printf("\n");
 }
 
 void changeCoinsOnBoard(Point points[], int player) {
@@ -417,7 +423,17 @@ void sendMoveToSharedMemory(int player, int x, int y) {
 }
 
 void getMoveFromSharedMemory() {
+    int x, y;
+    int oppPlayer = (curPlayer == BLACK) ? WHITE:BLACK;
 
+    x = sMBuf[1] - '0';
+    y = sMBuf[2] - '0';
+
+    // preform other player move
+    checkMove(x, y, oppPlayer, TRUE);
+
+    // check end game
+    gameState = checkEndGame(curPlayer);
 }
 
 void doOneMove() {
@@ -449,7 +465,7 @@ void doOneMove() {
 
 void start(int signum) {
     // do nothing - just wakup from pause
-    printf("%d", getpid());
+    printf("%d\n", getpid());
 }
 
 int main(int argc, char **argv) {
@@ -498,8 +514,10 @@ int main(int argc, char **argv) {
         exitWithError("close error");
     }
 
+    printf("before :\n");
     // wait for SIGUSR1
     pause();
+    printf("after :\n");
 
     // get the shmid by key
     if ((shmid = shmget(key, MEM_SIZE, 0644 | IPC_CREAT)) < 0) {
@@ -528,6 +546,8 @@ int main(int argc, char **argv) {
     initBoard();
     printBoard();
 
+    printf("*%d*\n", sMBuf[0]);
+
     // first play
     if (curPlayer == BLACK) {
         doOneMove();
@@ -537,9 +557,11 @@ int main(int argc, char **argv) {
     while (TRUE) {
         // current player move
         if (charToPlayer(sMBuf[0]) != curPlayer) {
+            getMoveFromSharedMemory();
+            if (gameState != NO_END) break;
+            printBoard();
             doOneMove();
-            if (WHITE_WIN) break;
-
+            if (gameState != NO_END) break;
         } else {
             // wait for the other player to play
             printf("Waiting for the other player to make a move\n");
