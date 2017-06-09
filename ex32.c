@@ -6,7 +6,6 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-#include <string.h>
 
 #define BOARD_SIZE 8
 #define BLACK 2
@@ -47,6 +46,16 @@ void initBoard() {
     board[4][4] = BLACK;
     board[4][3] = WHITE;
     board[3][4] = WHITE;
+/*
+    board[2][5] = WHITE;
+    board[3][3] = BLACK;
+    board[3][4] = WHITE;
+    board[3][5] = BLACK;
+    board[4][2] = BLACK;
+    board[4][3] = BLACK;
+    board[4][4] = BLACK;
+    board[5][2] = WHITE;
+    board[5][3] = BLACK; */
 
     // set game state
     gameState = NO_END;
@@ -90,7 +99,7 @@ MoveMode checkAbove(int x, int y, int player, Boolean writeToBoard) {
         }
 
         // only if the same color and not next to it
-        if (board[i][x] == player && (i != y - 1)) {
+        if (board[i][x] == player && (i != y - 1) && (i != y))  {
             if (writeToBoard) {
                 // set an end
                 p.x = -1;
@@ -121,7 +130,7 @@ MoveMode checkBelow(int x, int y, int player, Boolean writeToBoard) {
         }
 
         // only if the same color and not next to it
-        if (board[i][x] == player && (i != y + 1)) {
+        if (board[i][x] == player && (i != y + 1) && (i != y)) {
             if (writeToBoard) {
                 // set an end
                 p.x = -1;
@@ -152,7 +161,7 @@ MoveMode checkRight(int x, int y, int player, Boolean writeToBoard) {
         }
 
         // only if the same color and not next to it
-        if (board[y][i] == player && (i != x + 1)) {
+        if (board[y][i] == player && (i != x + 1) && (i != x)) {
             if (writeToBoard) {
                 // set an end
                 p.x = -1;
@@ -182,7 +191,7 @@ MoveMode checkLeft(int x, int y, int player, Boolean writeToBoard) {
         }
 
         // only if the same color and not next to it
-        if (board[y][i] == player && (i != x - 1)) {
+        if (board[y][i] == player && (i != x - 1) && (i != x)) {
             if (writeToBoard) {
                 // set an end
                 p.x = -1;
@@ -212,7 +221,7 @@ MoveMode checkUpperRight(int x, int y, int player, Boolean writeToBoard) {
         }
 
         // only if the same color and not next to it
-        if (board[j][i] == player && (i != x + 1)) {
+        if (board[j][i] == player && (i != x + 1) && (i != x)) {
             if (writeToBoard) {
                 // set an end
                 p.x = -1;
@@ -243,7 +252,7 @@ MoveMode checkUpperLeft(int x, int y, int player, Boolean writeToBoard) {
         }
 
         // only if the same color and not next to it
-        if (board[j][i] == player && (i != x - 1)) {
+        if (board[j][i] == player && (i != x - 1) && (i != x)) {
             if (writeToBoard) {
                 // set an end
                 p.x = -1;
@@ -274,7 +283,7 @@ MoveMode checkDownLeft(int x, int y, int player, Boolean writeToBoard) {
         }
 
         // only if the same color and not next to it
-        if (board[j][i] == player && (i != x - 1)) {
+        if (board[j][i] == player && (i != x - 1) && (i != x)) {
             if (writeToBoard) {
                 // set an end
                 p.x = -1;
@@ -305,7 +314,7 @@ MoveMode checkDownRight(int x, int y, int player, Boolean writeToBoard) {
         }
 
         // only if the same color and not next to it
-        if (board[j][i] == player && (i != x + 1)) {
+        if (board[j][i] == player && (i != x + 1) && (i != x)) {
             if (writeToBoard) {
                 // set an end
                 p.x = -1;
@@ -442,7 +451,7 @@ void doOneMove() {
 
     printf("Please choose a square\n");
     do {
-        scanf("[%d,%d]", &x, &y);
+        scanf("\n[%d,%d]", &x, &y);
 
         m = checkMove(x, y, curPlayer, TRUE);
         if (m == NO_SUCH_SQUARE) {
@@ -461,6 +470,9 @@ void doOneMove() {
     printBoard();
     printf("Waiting for the other player to make a move\n");
     sendMoveToSharedMemory(curPlayer, x, y);
+
+    // check end game
+    gameState = checkEndGame(curPlayer);
 }
 
 void start(int signum) {
@@ -489,6 +501,15 @@ int main(int argc, char **argv) {
     if ((sigaction(SIGUSR1, &sigUserHandler, NULL)) < 0) {
         exitWithError("sigaction error");
     }
+/*
+    initBoard();
+    printBoard();
+
+    scanf("[%d,%d]", &x, &y);
+
+    checkMove(x, y, WHITE, TRUE);
+
+    printBoard(); */
 
     // create key
     key = ftok("ex31.c", 'k');
@@ -514,10 +535,8 @@ int main(int argc, char **argv) {
         exitWithError("close error");
     }
 
-    printf("before :\n");
     // wait for SIGUSR1
     pause();
-    printf("after :\n");
 
     // get the shmid by key
     if ((shmid = shmget(key, MEM_SIZE, 0644 | IPC_CREAT)) < 0) {
@@ -546,8 +565,6 @@ int main(int argc, char **argv) {
     initBoard();
     printBoard();
 
-    printf("*%d*\n", sMBuf[0]);
-
     // first play
     if (curPlayer == BLACK) {
         doOneMove();
@@ -564,12 +581,32 @@ int main(int argc, char **argv) {
             if (gameState != NO_END) break;
         } else {
             // wait for the other player to play
-            printf("Waiting for the other player to make a move\n");
+            //printf("Waiting for the other player to make a move\n");
             sleep(1);
         }
     }
 
-    printBoard();
+    // notify server on game end
+    sMBuf[0] = 'e';
+
+    // print end results
+    switch (gameState) {
+        case WHITE_WIN: printf("Winning player: White\n");
+                        sMBuf[1] = 'w';
+                        break;
+        case BLACK_WIN: printf("Winning player: Black\n");
+                        sMBuf[1] = 'b';
+                        break;
+        case DRAW:      printf("No winning player\n");
+                        sMBuf[1] = 'd';
+        default:        break;
+    }
+
+    // detach from the shared memory
+    if ((shmdt(sMBuf)) <0 ) {
+        exitWithError("shmdt error");
+    }
+
     return 0;
 }
 

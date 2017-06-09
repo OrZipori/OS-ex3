@@ -92,8 +92,6 @@ int main(int argc, char **argv) {
         exitWithError("kill error");
     }
 
-    printf("first \n");
-
     // wait until the first player makes his move
     sleep(1);
 
@@ -102,7 +100,6 @@ int main(int argc, char **argv) {
         exitWithError("kill error");
     }
 
-    printf("second\n");
     // busy waiting for end of game
     while (sharedMemory[0] != 'e') {
         sleep(1);
