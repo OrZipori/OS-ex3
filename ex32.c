@@ -41,26 +41,28 @@ void exitWithError(char *msg) {
     exit(-1);
 }
 
+/*******************************************************************************
+* function name : initBoard
+* input : -
+* output : -
+* explanation : initialize the board.
+*******************************************************************************/
 void initBoard() {
     board[3][3] = BLACK;
     board[4][4] = BLACK;
     board[4][3] = WHITE;
     board[3][4] = WHITE;
-/*
-    board[2][5] = WHITE;
-    board[3][3] = BLACK;
-    board[3][4] = WHITE;
-    board[3][5] = BLACK;
-    board[4][2] = BLACK;
-    board[4][3] = BLACK;
-    board[4][4] = BLACK;
-    board[5][2] = WHITE;
-    board[5][3] = BLACK; */
 
     // set game state
     gameState = NO_END;
 }
 
+/*******************************************************************************
+* function name : printBoard
+* input : -
+* output : -
+* explanation : print the board.
+*******************************************************************************/
 void printBoard() {
     int i,j;
     printf("The board is:\n");
@@ -73,6 +75,12 @@ void printBoard() {
     printf("\n");
 }
 
+/*******************************************************************************
+* function name : changeCoinsOnBoard
+* input : Point points[], int player
+* output : -
+* explanation : set the correct coins on the board.
+*******************************************************************************/
 void changeCoinsOnBoard(Point points[], int player) {
     int j = 0;
     while (j < BOARD_SIZE) {
@@ -87,9 +95,18 @@ void changeCoinsOnBoard(Point points[], int player) {
     }
 }
 
+/*******************************************************************************
+* function name : checkAbove
+* input : int x, int y, int player, Boolean writeToBoard
+* output : VALID_MOVE if all ok, else INVALID_SQUARE
+* explanation : check for a valid move
+*******************************************************************************/
 MoveMode checkAbove(int x, int y, int player, Boolean writeToBoard) {
     int i, k = 0;
     Point tempArr[8];
+
+    if (board[y - 1][x] == player) return INVALID_SQUARE;
+
     // check above
     for (i = y; i >=0; --i) {
         Point p;
@@ -118,9 +135,18 @@ MoveMode checkAbove(int x, int y, int player, Boolean writeToBoard) {
     return INVALID_SQUARE;
 }
 
+/*******************************************************************************
+* function name : checkBelow
+* input : int x, int y, int player, Boolean writeToBoard
+* output : VALID_MOVE if all ok, else INVALID_SQUARE
+* explanation : check for a valid move
+*******************************************************************************/
 MoveMode checkBelow(int x, int y, int player, Boolean writeToBoard) {
     int i, k = 0;
     Point tempArr[8];
+
+    if (board[y + 1][x] == player) return INVALID_SQUARE;
+
     // check above
     for (i = y; i < BOARD_SIZE; ++i) {
         Point p;
@@ -148,10 +174,18 @@ MoveMode checkBelow(int x, int y, int player, Boolean writeToBoard) {
     return  INVALID_SQUARE;
 }
 
-
+/*******************************************************************************
+* function name : checkRight
+* input : int x, int y, int player, Boolean writeToBoard
+* output : VALID_MOVE if all ok, else INVALID_SQUARE
+* explanation : check for a valid move
+*******************************************************************************/
 MoveMode checkRight(int x, int y, int player, Boolean writeToBoard) {
     int i, k = 0;
     Point tempArr[8];
+
+    if (board[y][x + 1] == player) return INVALID_SQUARE;
+
     // check above
     for (i = x; i < BOARD_SIZE; ++i) {
         Point p;
@@ -179,9 +213,18 @@ MoveMode checkRight(int x, int y, int player, Boolean writeToBoard) {
     return  INVALID_SQUARE;
 }
 
+/*******************************************************************************
+* function name : checkLeft
+* input : int x, int y, int player, Boolean writeToBoard
+* output : VALID_MOVE if all ok, else INVALID_SQUARE
+* explanation : check for a valid move
+*******************************************************************************/
 MoveMode checkLeft(int x, int y, int player, Boolean writeToBoard) {
     int i, k = 0;
     Point tempArr[8];
+
+    if (board[y][x - 1] == player) return INVALID_SQUARE;
+
     // check above
     for (i = x; i >= 0; --i) {
         Point p;
@@ -209,9 +252,18 @@ MoveMode checkLeft(int x, int y, int player, Boolean writeToBoard) {
     return  INVALID_SQUARE;
 }
 
+/*******************************************************************************
+* function name : checkUpperRight
+* input : int x, int y, int player, Boolean writeToBoard
+* output : VALID_MOVE if all ok, else INVALID_SQUARE
+* explanation : check for a valid move
+*******************************************************************************/
 MoveMode checkUpperRight(int x, int y, int player, Boolean writeToBoard) {
     int i, k = 0, j = y;
     Point tempArr[8];
+
+    if (board[y - 1][x + 1] == player) return INVALID_SQUARE;
+
     // check above
     for (i = x; i < BOARD_SIZE; ++i) {
         Point p;
@@ -235,14 +287,24 @@ MoveMode checkUpperRight(int x, int y, int player, Boolean writeToBoard) {
         p.y = j;
         tempArr[k++] = p;
         j--;
+        if (j < 0) break;
     }
 
     return  INVALID_SQUARE;
 }
 
+/*******************************************************************************
+* function name : checkUpperLeft
+* input : int x, int y, int player, Boolean writeToBoard
+* output : VALID_MOVE if all ok, else INVALID_SQUARE
+* explanation : check for a valid move
+*******************************************************************************/
 MoveMode checkUpperLeft(int x, int y, int player, Boolean writeToBoard) {
     int i, k = 0, j = y;
     Point tempArr[8];
+
+    if (board[y - 1][x - 1] == player) return INVALID_SQUARE;
+
     // check above
     for (i = x; i >= 0; --i) {
         Point p;
@@ -266,14 +328,24 @@ MoveMode checkUpperLeft(int x, int y, int player, Boolean writeToBoard) {
         p.y = j;
         tempArr[k++] = p;
         j--;
+        if (j < 0) break;
     }
 
     return  INVALID_SQUARE;
 }
 
+/*******************************************************************************
+* function name : checkDownLeft
+* input : int x, int y, int player, Boolean writeToBoard
+* output : VALID_MOVE if all ok, else INVALID_SQUARE
+* explanation : check for a valid move
+*******************************************************************************/
 MoveMode checkDownLeft(int x, int y, int player, Boolean writeToBoard) {
     int i, k = 0, j = y;
     Point tempArr[8];
+
+    if (board[y + 1][x - 1] == player) return INVALID_SQUARE;
+
     // check above
     for (i = x; i >= 0; --i) {
         Point p;
@@ -297,14 +369,24 @@ MoveMode checkDownLeft(int x, int y, int player, Boolean writeToBoard) {
         p.y = j;
         tempArr[k++] = p;
         j++;
+        if (j >= BOARD_SIZE) break;
     }
 
     return  INVALID_SQUARE;
 }
 
+/*******************************************************************************
+* function name : checkDownRight
+* input : int x, int y, int player, Boolean writeToBoard
+* output : VALID_MOVE if all ok, else INVALID_SQUARE
+* explanation : check for a valid move
+*******************************************************************************/
 MoveMode checkDownRight(int x, int y, int player, Boolean writeToBoard) {
     int i, k = 0, j = y;
     Point tempArr[8];
+
+    if (board[y + 1][x + 1] == player) return INVALID_SQUARE;
+
     // check above
     for (i = x; i < BOARD_SIZE; ++i) {
         Point p;
@@ -328,11 +410,18 @@ MoveMode checkDownRight(int x, int y, int player, Boolean writeToBoard) {
         p.y = j;
         tempArr[k++] = p;
         j++;
+        if (j >= BOARD_SIZE) break;
     }
 
     return  INVALID_SQUARE;
 }
 
+/*******************************************************************************
+* function name : checkMove
+* input : int x, int y, int player, Boolean writeToBoard
+* output : VALID_MOVE if all ok, else INVALID_SQUARE
+* explanation : start a series of checks to find if a move is valid
+*******************************************************************************/
 MoveMode checkMove(int x, int y, int player ,Boolean writeToBoard) {
     int i, j;
     int savePos[8] = {-2};
@@ -370,6 +459,12 @@ MoveMode checkMove(int x, int y, int player ,Boolean writeToBoard) {
     return INVALID_SQUARE;
 }
 
+/*******************************************************************************
+* function name : checkEndGame
+* input : int player
+* output : NO_END if game is on or WHITE_WIN, BLACK_WIN and DRAW
+* explanation : check for if the game has ended
+*******************************************************************************/
 EndMode checkEndGame(int player) {
     // we check if the other player can't make a move
     int oppColor = (player == BLACK) ? WHITE:BLACK;
@@ -399,38 +494,67 @@ EndMode checkEndGame(int player) {
 
     // both players can still play
     if (playerHasMoves && oppPlayerHasMoves) {
+        printf("<--- can play --->\n");
         return NO_END;
     }
 
     // if one of them has no legal move
     if (!playerHasMoves || !oppPlayerHasMoves) {
         if (white > black) {
+            printf("<--- white --->\n");
             return WHITE_WIN;
         }
 
         if (white < black) {
+            printf("<--- black --->\n");
             return BLACK_WIN;
         }
     }
 
+    printf("<--- draw --->\n");
     return DRAW;
 }
 
+/*******************************************************************************
+* function name : charToPlayer
+* input : char c
+* output : WHITE or BLACK
+* explanation : translate char to player.
+*******************************************************************************/
 int charToPlayer(char c) {
     if (c == 'w') return WHITE;
     if (c == 0) return curPlayer; // if it's 0 means the first player didn't made a move
     return BLACK;
 }
 
+/*******************************************************************************
+* function name : playerToChar
+* input : int player
+* output : 'w' or 'b'
+* explanation : translate player to char.
+*******************************************************************************/
 char playerToChar(int player) {
     if (player == WHITE) return 'w';
     return 'b';
 }
 
+/*******************************************************************************
+* function name : sendMoveToSharedMemory
+* input : int player, int x, int y
+* output : -
+* explanation : write the move to the shared memory.
+*******************************************************************************/
 void sendMoveToSharedMemory(int player, int x, int y) {
-    sprintf(sMBuf, "%c%d%d", playerToChar(player), x, y);
+    char p = playerToChar(player);
+    sprintf(sMBuf, "%c%d%d", p, x, y);
 }
 
+/*******************************************************************************
+* function name : getMoveFromSharedMemory
+* input : -
+* output : -
+* explanation : get the move from the shared memory and execute it.
+*******************************************************************************/
 void getMoveFromSharedMemory() {
     int x, y;
     int oppPlayer = (curPlayer == BLACK) ? WHITE:BLACK;
@@ -445,6 +569,12 @@ void getMoveFromSharedMemory() {
     gameState = checkEndGame(curPlayer);
 }
 
+/*******************************************************************************
+* function name : doOneMove
+* input : -
+* output : -
+* explanation : execute one move of gmaeplay.
+*******************************************************************************/
 void doOneMove() {
     int x, y;
     MoveMode m;
@@ -464,22 +594,35 @@ void doOneMove() {
         }
 
         printf("Please choose another square\n");
-    } while (m != VALID_MOVE);
+    } while (TRUE);
 
     // valid move
     printBoard();
     printf("Waiting for the other player to make a move\n");
     sendMoveToSharedMemory(curPlayer, x, y);
-
+    printf("!!!!!! write to share !!!!!!!!\n");
     // check end game
     gameState = checkEndGame(curPlayer);
+    printf("!!!!!! after %d !!!!!!!!\n", gameState);
 }
 
+/*******************************************************************************
+* function name : start
+* input : int signum
+* output : -
+* explanation : wake up function after pause.
+*******************************************************************************/
 void start(int signum) {
     // do nothing - just wakup from pause
-    printf("%d\n", getpid());
+    //printf("%d\n", getpid());
 }
 
+/*******************************************************************************
+* function name : main
+* input : int argc, char **argv
+* output : 0
+* explanation : main function
+*******************************************************************************/
 int main(int argc, char **argv) {
     int x,y;
     int fifoFD;
@@ -563,10 +706,10 @@ int main(int argc, char **argv) {
 
     // initialize game
     initBoard();
-    printBoard();
 
     // first play
     if (curPlayer == BLACK) {
+        printBoard();
         doOneMove();
     }
 
@@ -587,19 +730,33 @@ int main(int argc, char **argv) {
     }
 
     // notify server on game end
-    sMBuf[0] = 'e';
+    if (sMBuf[6] != 'e') {
+        sleep(2);
+        sMBuf[6] = 'e';
 
-    // print end results
-    switch (gameState) {
-        case WHITE_WIN: printf("Winning player: White\n");
-                        sMBuf[1] = 'w';
-                        break;
-        case BLACK_WIN: printf("Winning player: Black\n");
-                        sMBuf[1] = 'b';
-                        break;
-        case DRAW:      printf("No winning player\n");
-                        sMBuf[1] = 'd';
-        default:        break;
+        // print end results
+        switch (gameState) {
+            case WHITE_WIN: printf("Winning player: White\n");
+                sMBuf[1] = 'w';
+                break;
+            case BLACK_WIN: printf("Winning player: Black\n");
+                sMBuf[1] = 'b';
+                break;
+            case DRAW:      printf("No winning player\n");
+                sMBuf[1] = 'd';
+            default:        break;
+        }
+    } else {
+        switch (sMBuf[7]) {
+            case 'w': printf("Winning player: White\n");
+                break;
+            case 'b': printf("Winning player: Black\n");
+                break;
+            case 'd': printf("No winning player\n");
+                break;
+            default:
+                break;
+        }
     }
 
     // detach from the shared memory

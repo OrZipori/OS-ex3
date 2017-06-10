@@ -34,6 +34,12 @@ void exitWithError(char *msg) {
     exit(-1);
 }
 
+/*******************************************************************************
+* function name : main
+* input : int argc, char **argv
+* output : 0
+* explanation : main function
+*******************************************************************************/
 int main(int argc, char **argv) {
     pid_t firstPID, secondPID;
     int fifoFD;
@@ -101,15 +107,15 @@ int main(int argc, char **argv) {
     }
 
     // busy waiting for end of game
-    while (sharedMemory[0] != 'e') {
+    while (sharedMemory[6] != 'e') {
         sleep(1);
     }
 
     // end game
     printf("GAME OVER !\n");
-    if (sharedMemory[1] == 'w') {
+    if (sharedMemory[7] == 'w') {
         printf("Winning player: White\n");
-    } else if (sharedMemory[1] == 'b') {
+    } else if (sharedMemory[7] == 'b') {
         printf("Winning player: Black\n");
     } else {
         printf("No winning player");
