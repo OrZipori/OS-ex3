@@ -1,4 +1,9 @@
-
+/*
+ * Student name : Or Zipori
+ * Student : 302933833
+ * Course Exercise Group : 03
+ * Exercise Name : ex3
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -62,12 +67,11 @@ int main(int argc, char **argv) {
     if ((read(fifoFD, &firstPID, sizeof(pid_t))) < 0) {
         exitWithError("read error");
     }
-    printf("first : %d\n", firstPID);
+
     // get second pid
     if ((read(fifoFD, &secondPID, sizeof(pid_t))) < 0) {
         exitWithError("read error");
     }
-    printf("second :%d\n", secondPID);
 
     // remove the fifo
     if ((unlink("fifo_clientTOserver")) < 0) {

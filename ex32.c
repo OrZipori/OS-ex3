@@ -1,3 +1,9 @@
+/*
+ * Student name : Or Zipori
+ * Student : 302933833
+ * Course Exercise Group : 03
+ * Exercise Name : ex3
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -466,52 +472,42 @@ MoveMode checkMove(int x, int y, int player ,Boolean writeToBoard) {
 * explanation : check for if the game has ended
 *******************************************************************************/
 EndMode checkEndGame(int player) {
-    // we check if the other player can't make a move
-    int oppColor = (player == BLACK) ? WHITE:BLACK;
     int i, j;
-    int black = 0, white = 0, free = 0;
-    Boolean playerHasMoves = FALSE, oppPlayerHasMoves = FALSE;
+    int black = 0, white = 0;
+    Boolean playerHasMoves = FALSE;
 
     for (i = 0; i < BOARD_SIZE; i++) {
         for (j = 0; j < BOARD_SIZE; j ++) {
-            if (checkMove(j, i, oppColor, FALSE) == VALID_MOVE) {
-                oppPlayerHasMoves = TRUE;
-            }
-
-            if (checkMove(j, i, player, FALSE) == VALID_MOVE) {
-                playerHasMoves = TRUE;
+            if (board[i][j] == FREE) {
+                if (checkMove(j, i, player, FALSE) == VALID_MOVE) {
+                    playerHasMoves = TRUE;
+                }
             }
 
             if (board[i][j] == WHITE) {
                 white++;
             } else if (board[i][j] == BLACK) {
                 black++;
-            } else {
-                free++;
             }
         }
     }
 
     // both players can still play
-    if (playerHasMoves && oppPlayerHasMoves) {
-        printf("<--- can play --->\n");
+    if (playerHasMoves) {
         return NO_END;
     }
 
     // if one of them has no legal move
-    if (!playerHasMoves || !oppPlayerHasMoves) {
+    if (!playerHasMoves) {
         if (white > black) {
-            printf("<--- white --->\n");
             return WHITE_WIN;
         }
 
         if (white < black) {
-            printf("<--- black --->\n");
             return BLACK_WIN;
         }
     }
 
-    printf("<--- draw --->\n");
     return DRAW;
 }
 
@@ -565,7 +561,7 @@ void getMoveFromSharedMemory() {
     // preform other player move
     checkMove(x, y, oppPlayer, TRUE);
 
-    // check end game
+    // check if current player has moves
     gameState = checkEndGame(curPlayer);
 }
 
@@ -578,7 +574,7 @@ void getMoveFromSharedMemory() {
 void doOneMove() {
     int x, y;
     MoveMode m;
-
+    int oppColor = (curPlayer == BLACK) ? WHITE:BLACK;
     printf("Please choose a square\n");
     do {
         scanf("\n[%d,%d]", &x, &y);
@@ -598,12 +594,9 @@ void doOneMove() {
 
     // valid move
     printBoard();
-    printf("Waiting for the other player to make a move\n");
     sendMoveToSharedMemory(curPlayer, x, y);
-    printf("!!!!!! write to share !!!!!!!!\n");
-    // check end game
-    gameState = checkEndGame(curPlayer);
-    printf("!!!!!! after %d !!!!!!!!\n", gameState);
+    // check if the opponent has moves
+    gameState = checkEndGame(oppColor);
 }
 
 /*******************************************************************************
@@ -613,7 +606,7 @@ void doOneMove() {
 * explanation : wake up function after pause.
 *******************************************************************************/
 void start(int signum) {
-    // do nothing - just wakup from pause
+    // do nothing - just wake up from pause
     //printf("%d\n", getpid());
 }
 
@@ -644,15 +637,6 @@ int main(int argc, char **argv) {
     if ((sigaction(SIGUSR1, &sigUserHandler, NULL)) < 0) {
         exitWithError("sigaction error");
     }
-/*
-    initBoard();
-    printBoard();
-
-    scanf("[%d,%d]", &x, &y);
-
-    checkMove(x, y, WHITE, TRUE);
-
-    printBoard(); */
 
     // create key
     key = ftok("ex31.c", 'k');
@@ -724,7 +708,7 @@ int main(int argc, char **argv) {
             if (gameState != NO_END) break;
         } else {
             // wait for the other player to play
-            //printf("Waiting for the other player to make a move\n");
+            printf("Waiting for the other player to make a move\n");
             sleep(1);
         }
     }
@@ -737,13 +721,13 @@ int main(int argc, char **argv) {
         // print end results
         switch (gameState) {
             case WHITE_WIN: printf("Winning player: White\n");
-                sMBuf[1] = 'w';
+                sMBuf[7] = 'w';
                 break;
             case BLACK_WIN: printf("Winning player: Black\n");
-                sMBuf[1] = 'b';
+                sMBuf[7] = 'b';
                 break;
             case DRAW:      printf("No winning player\n");
-                sMBuf[1] = 'd';
+                sMBuf[7] = 'd';
             default:        break;
         }
     } else {
@@ -776,5 +760,4 @@ int main(int argc, char **argv) {
  * end :
  * 1. board is full.
  * 2. no chips left.
- * 3.
  */
